@@ -18,7 +18,7 @@ class AdminUserSeeder extends Seeder
             'name' => 'Admin Bumbu',
             'email' => 'admin@bumbu.com',
             'email_verified_at' => now(),
-            'password' => Hash::make('password'), // Ganti dengan password yang lebih kuat di produksi
+            'password' => Hash::make('BumbuOpie123'), // Ganti dengan password yang lebih kuat di produksi
             'role' => 'admin',
         ]);
     }
