@@ -64,5 +64,8 @@ class AppServiceProvider extends ServiceProvider
         
         Paginator::useBootstrapFive();
 
+        Livewire::setUpdateRouteMiddleware(['web']);
+        Livewire::setUploadRouteMiddleware(['web']);
+
     }
 }
