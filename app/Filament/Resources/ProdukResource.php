@@ -77,9 +77,7 @@ class ProdukResource extends Resource
                     ->preload(),
                 FileUpload::make('gambar')
                     ->label('Gambar')
-                    ->image()
                     ->directory('produks')
-                    ->nullable()
                     ->visibility('public')
                     ->disk(env('FILESYSTEM_DISK', 'cloudinary')),
                 TextInput::make('diskon')
