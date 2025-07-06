@@ -80,7 +80,8 @@ class ProdukResource extends Resource
                     ->image()
                     ->nullable()
                     ->directory('produks')
-                    ->visibility('public'),
+                    ->visibility('public')
+                    ->disk(env('FILESYSTEM_DISK', 'cloudinary')),
                 TextInput::make('diskon')
                     ->label('Diskon')
                     ->nullable()
