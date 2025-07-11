@@ -99,4 +99,19 @@ class NotifikasiController extends Controller
         $notifikasi->delete();
         return response()->json(null, 204);
     }
+
+    /**
+     * Hapus semua notifikasi user
+     */
+    public function clearAll(Request $request)
+    {
+        $userId = $request->user()->id;
+        $deleted = \App\Models\Notifikasi::where('notifiable_type', 'App\\Models\\User')
+            ->where('notifiable_id', $userId)
+            ->delete();
+        return response()->json([
+            'message' => 'Semua notifikasi berhasil dihapus.',
+            'deleted' => $deleted
+        ]);
+    }
 }

@@ -1,0 +1,17 @@
+# Force HTTPS for all requests
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Allow direct access to APK files
+<Files "*.apk">
+    Header set Content-Type application/vnd.android.package-archive
+    Header set Content-Disposition "attachment; filename=%f"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</Files>
+
+# Prevent access to other file types
+<FilesMatch "^(?!.*\.apk$).*$">
+    Order deny,allow
+    Deny from all
+</FilesMatch> 

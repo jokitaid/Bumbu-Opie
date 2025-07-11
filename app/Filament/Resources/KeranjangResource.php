@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
 
 class KeranjangResource extends Resource
@@ -42,6 +43,14 @@ class KeranjangResource extends Resource
                     ->required()
                     ->numeric()
                     ->minValue(1),
+                Textarea::make('komponen_bumbu')
+                    ->label('Campuran Bumbu (JSON)')
+                    ->placeholder('[{"produk_id":2,"jumlah":10}]')
+                    ->nullable()
+                    ->columnSpanFull()
+                    ->rows(6)
+                    ->formatStateUsing(fn($state) => is_array($state) ? json_encode($state, JSON_PRETTY_PRINT) : $state)
+                    ->dehydrateStateUsing(fn($state) => is_string($state) ? json_decode($state, true) : $state),
             ]);
     }
 
@@ -60,6 +69,23 @@ class KeranjangResource extends Resource
                 TextColumn::make('quantity')
                     ->numeric()
                     ->sortable(),
+                TextColumn::make('komponen_bumbu')
+                    ->label('Campuran Bumbu')
+                    ->formatStateUsing(function($state) {
+                        // Pastikan $state array
+                        if (is_string($state)) {
+                            $state = json_decode($state, true);
+                        }
+                        if (!is_array($state) || empty($state)) {
+                            return '-';
+                        }
+                        // Tampilkan campuran bumbu
+                        return collect($state)
+                            ->filter(fn($b) => !empty($b['nama']) && !empty($b['jumlah']))
+                            ->map(fn($b) => $b['nama'] . ' (' . $b['jumlah'] . ' ' . ($b['satuan'] ?? '') . ')')
+                            ->implode(', ');
+                    })
+                    ->toggleable(isToggledHiddenByDefault: false),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -76,6 +102,7 @@ class KeranjangResource extends Resource
                     ->relationship('produk', 'nama'),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -97,8 +124,6 @@ class KeranjangResource extends Resource
     {
         return [
             'index' => Pages\ListKeranjangs::route('/'),
-            'create' => Pages\CreateKeranjang::route('/create'),
-            'edit' => Pages\EditKeranjang::route('/{record}/edit'),
         ];
     }
 }

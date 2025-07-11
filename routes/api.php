@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\KurirController;
+use App\Http\Controllers\Api\ForgotPasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +31,11 @@ use App\Http\Controllers\Api\KurirController;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'register']);
 Route::post('/auth/google', [GoogleAuthController::class, 'googleSignIn']);
+
+// Forgot Password routes
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendOtp']);
+Route::post('/verify-otp', [ForgotPasswordController::class, 'verifyOtp']);
+Route::post('/reset-password', [ForgotPasswordController::class, 'resetWithOtp']);
 
 Route::get('/test', function () {
     return response()->json(['message' => 'API is working!']);
@@ -66,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/keranjang', [KeranjangController::class, 'store']);
     Route::put('/keranjang/{keranjang}', [KeranjangController::class, 'update']);
     Route::delete('/keranjang/{keranjang}', [KeranjangController::class, 'destroy']);
+    Route::delete('/keranjang/all', [KeranjangController::class, 'clearAll']);
 
     // Alamat routes
     Route::get('/alamat', [AlamatPenggunaController::class, 'index']);
@@ -92,4 +99,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifikasi', [NotifikasiController::class, 'index']);
     Route::get('/notifikasi/{notifikasi}', [NotifikasiController::class, 'show']);
     Route::post('/notifikasi/{notifikasi}/mark-as-read', [NotifikasiController::class, 'markAsRead']);
+    Route::delete('/notifikasi/{notifikasi}', [NotifikasiController::class, 'destroy']);
+    Route::delete('/notifikasi/all', [NotifikasiController::class, 'clearAll']);
 });

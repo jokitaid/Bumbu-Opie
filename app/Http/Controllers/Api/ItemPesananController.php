@@ -27,6 +27,11 @@ class ItemPesananController extends Controller
         }
 
         $itemPesanans = $pesanan->itemPesanan()->with('produk')->get();
+        $itemPesanans->transform(function ($item) {
+            $item->satuan = $item->produk->satuan ?? null;
+            $item->detail_satuan = $item->produk->detail_satuan ?? null;
+            return $item;
+        });
         return response()->json($itemPesanans);
     }
 
@@ -49,7 +54,10 @@ class ItemPesananController extends Controller
         if ($itemPesanan->pesanan->user_id !== auth()->id()) {
             return response()->json(['message' => 'Tidak diizinkan.'], 403);
         }
-        return response()->json($itemPesanan->load('produk'));
+        $itemPesanan->load('produk');
+        $itemPesanan->satuan = $itemPesanan->produk->satuan ?? null;
+        $itemPesanan->detail_satuan = $itemPesanan->produk->detail_satuan ?? null;
+        return response()->json($itemPesanan);
     }
 
     /**
@@ -73,8 +81,10 @@ class ItemPesananController extends Controller
         }
 
         $itemPesanan->update($request->only('quantity'));
-
-        return response()->json($itemPesanan->load('produk'));
+        $itemPesanan->load('produk');
+        $itemPesanan->satuan = $itemPesanan->produk->satuan ?? null;
+        $itemPesanan->detail_satuan = $itemPesanan->produk->detail_satuan ?? null;
+        return response()->json($itemPesanan);
     }
 
     /**

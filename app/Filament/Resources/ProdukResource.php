@@ -75,11 +75,28 @@ class ProdukResource extends Resource
                     ->required()
                     ->searchable()
                     ->preload(),
+                Select::make('satuan')
+                    ->label('Satuan')
+                    ->options([
+                        'ml' => 'ml (Botol)',
+                        'bungkus' => 'Bungkus (Bumbu Racik/Terasi)',
+                        'gram' => 'Gram',
+                        'ons' => 'Ons',
+                        'pcs' => 'Pcs',
+                    ])
+                    ->required(),
+                TextInput::make('detail_satuan')
+                    ->label('Detail Satuan')
+                    ->placeholder('Contoh: 500 ml, 1 bungkus, 100 gram')
+                    ->maxLength(50)
+                    ->required(),
                 FileUpload::make('gambar')
                     ->label('Gambar')
+                    ->image()
+                    ->disk('public')
+                    ->nullable()
                     ->directory('produks')
-                    ->visibility('public')
-                    ->disk(env('FILESYSTEM_DISK', 'cloudinary')),
+                    ->visibility('public'),
                 TextInput::make('diskon')
                     ->label('Diskon')
                     ->nullable()
@@ -119,6 +136,12 @@ class ProdukResource extends Resource
                 TextColumn::make('stok')
                     ->label('Stok')
                     ->numeric()
+                    ->sortable(),
+                TextColumn::make('satuan')
+                    ->label('Satuan')
+                    ->sortable(),
+                TextColumn::make('detail_satuan')
+                    ->label('Detail Satuan')
                     ->sortable(),
                 ImageColumn::make('gambar')
                     ->label('Gambar')

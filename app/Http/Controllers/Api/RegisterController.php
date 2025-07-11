@@ -21,8 +21,8 @@ class RegisterController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|string|min:8|confirmed',
-                'phone' => 'required|string|max:20',
-                'address' => 'required|string|max:255',
+                'phone' => 'nullable|string|max:20',
+                'address' => 'nullable|string|max:255',
             ]);
 
             // Cek apakah email sudah terdaftar
@@ -39,8 +39,8 @@ class RegisterController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
-                'phone' => $validated['phone'],
-                'address' => $validated['address'],
+                'phone' => $validated['phone'] ?? null,
+                'address' => $validated['address'] ?? null,
                 'role' => 'pengguna', // Default role
             ]);
 

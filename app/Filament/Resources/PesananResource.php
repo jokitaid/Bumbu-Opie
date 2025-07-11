@@ -96,19 +96,23 @@ class PesananResource extends Resource
                 TextColumn::make('kode_pesanan')
                     ->label('Kode Pesanan')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('kurir.nama')
                     ->label('Kurir')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('ongkir')
                     ->label('Ongkir')
                     ->money('IDR', true)
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('total_harga')
                     ->label('Total Harga')
                     ->money('IDR', true)
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('user.name')
                     ->label('Pengguna')
                     ->searchable()
@@ -125,7 +129,8 @@ class PesananResource extends Resource
                 TextColumn::make('metode_pembayaran')
                     ->label('Metode Pembayaran')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('midtrans_transaction_status')
                     ->label('Status Transaksi Midtrans')
                     ->searchable()
@@ -157,6 +162,7 @@ class PesananResource extends Resource
                     ->relationship('user', 'name'),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -170,7 +176,7 @@ class PesananResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\ItemPesananRelationManager::class,
+           
         ];
     }
 
@@ -180,6 +186,8 @@ class PesananResource extends Resource
             'index' => Pages\ListPesanans::route('/'),
             'create' => Pages\CreatePesanan::route('/create'),
             'edit' => Pages\EditPesanan::route('/{record}/edit'),
+            'view' => Pages\ViewPesanan::route('/{record}'),
+
         ];
     }
 }

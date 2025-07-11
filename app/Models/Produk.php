@@ -22,6 +22,8 @@ class Produk extends Model
         'kategori_id',
         'gambar',
         'diskon',
+        'satuan',
+        'detail_satuan',
     ];
 
     protected $casts = [

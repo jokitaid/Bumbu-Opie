@@ -15,6 +15,11 @@ class Keranjang extends Model
         'user_id',
         'product_id',
         'quantity',
+        'komponen_bumbu',
+    ];
+
+    protected $casts = [
+        'komponen_bumbu' => 'array',
     ];
 
     public function user()

@@ -17,6 +17,11 @@ class ProdukController extends Controller
     public function index()
     {
         $produks = Produk::with('kategori')->get();
+        $produks->transform(function ($produk) {
+            $produk->satuan = $produk->satuan;
+            $produk->detail_satuan = $produk->detail_satuan;
+            return $produk;
+        });
         return response()->json($produks);
     }
 
@@ -49,6 +54,8 @@ class ProdukController extends Controller
             'kategori_id' => $request->kategori_id,
             'gambar' => $imagePath,
             'diskon' => $request->diskon ?? 0,
+            'satuan' => $request->satuan,
+            'detail_satuan' => $request->detail_satuan,
         ]);
 
         return response()->json($produk->load('kategori'), 201);
@@ -59,6 +66,8 @@ class ProdukController extends Controller
      */
     public function show(Produk $produk)
     {
+        $produk->satuan = $produk->satuan;
+        $produk->detail_satuan = $produk->detail_satuan;
         return response()->json($produk->load('kategori'));
     }
 

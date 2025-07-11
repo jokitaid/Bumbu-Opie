@@ -31,6 +31,11 @@ class PesananController extends Controller
         ];
         $pesanans->transform(function ($pesanan) use ($statusLabels) {
             $pesanan->status_label = $statusLabels[$pesanan->status] ?? $pesanan->status;
+            // Tambahkan satuan pada setiap item pesanan
+            foreach ($pesanan->itemPesanan as $item) {
+                $item->satuan = $item->produk->satuan ?? null;
+                $item->detail_satuan = $item->produk->detail_satuan ?? null;
+            }
             return $pesanan;
         });
         return response()->json($pesanans);
@@ -41,147 +46,179 @@ class PesananController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'metode_pembayaran' => 'required|string',
-            'alamat_pengiriman' => 'required|string',
-            'items' => 'required|array|min:1', // Pastikan ada item yang dikirim
-            'items.*.product_id' => 'required|exists:produks,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.komponen_bumbu' => 'nullable|array', // Validasi untuk bumbu campur
-        ]);
-
-        $userId = auth()->id();
-
-        DB::beginTransaction();
+        Log::info('Request pesanan masuk', $request->all());
         try {
-            $totalHarga = 0;
-            $orderItemsMidtrans = [];
-
-            foreach ($request->items as $itemData) {
-                $produk = Produk::find($itemData['product_id']);
-                if (!$produk) {
-                    DB::rollBack();
-                    return response()->json(['message' => 'Produk dengan ID ' . $itemData['product_id'] . ' tidak ditemukan.'], 404);
-                }
-                if ($produk->stok < $itemData['quantity']) {
-                    DB::rollBack();
-                    return response()->json(['message' => 'Stok produk ' . $produk->nama . ' tidak mencukupi untuk kuantitas yang diminta.'], 400);
-                }
-                
-                $hargaItem = $produk->harga - ($produk->harga * $produk->diskon / 100);
-                $subtotal = $hargaItem * $itemData['quantity'];
-                $totalHarga += $subtotal;
-
-                $orderItemsMidtrans[] = [
-                    'id' => $produk->id,
-                    'price' => (int) $hargaItem,
-                    'quantity' => (int) $itemData['quantity'],
-                    'name' => $produk->nama . (isset($itemData['komponen_bumbu']) ? ' (Campur)' : ''),
-                ];
-            }
-
-            // Ambil ongkir dari kurir
-            $kurir = \App\Models\Kurir::find($request->kurir_id);
-            $ongkir = $kurir ? $kurir->harga : 0;
-            $totalHarga += $ongkir;
-
-            // Tambahkan ongkir ke item_details Midtrans
-            $orderItemsMidtrans[] = [
-                'id' => 'ONGKIR',
-                'price' => (int) $ongkir,
-                'quantity' => 1,
-                'name' => 'Ongkos Kirim',
-            ];
-
-            $kodePesanan = 'ORD-' . Str::upper(Str::random(8));
-
-            $pesanan = Pesanan::create([
-                'user_id' => $userId,
-                'kode_pesanan' => $kodePesanan,
-                'total_harga' => $totalHarga,
-                'status' => 'pending',
-                'metode_pembayaran' => $request->metode_pembayaran,
-                'alamat_pengiriman' => $request->alamat_pengiriman,
-                'kurir_id' => $request->kurir_id,
-                'ongkir' => $ongkir,
+            $request->validate([
+                'metode_pembayaran' => 'required|string',
+                'alamat_pengiriman' => 'required|string',
+                'items' => 'required|array|min:1',
+                'items.*.product_id' => 'required|exists:produks,id',
+                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.komponen_bumbu' => 'nullable|array',
+                'kurir_id' => 'required|exists:kurirs,id',
             ]);
 
-            foreach ($request->items as $itemData) {
-                $produk = Produk::find($itemData['product_id']);
-                $hargaItem = ($produk->harga - ($produk->harga * $produk->diskon / 100));
-                
-                $pesanan->itemPesanan()->create([
-                    'produk_id' => $itemData['product_id'],
-                    'quantity' => $itemData['quantity'],
-                    'harga' => $hargaItem,
-                    'komponen_bumbu' => isset($itemData['komponen_bumbu']) ? $itemData['komponen_bumbu'] : null,
+            $userId = auth()->id();
+
+            DB::beginTransaction();
+            try {
+                $totalHarga = 0;
+                $orderItemsMidtrans = [];
+
+                foreach ($request->items as $itemData) {
+                    $produk = Produk::find($itemData['product_id']);
+                    if (!$produk) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Produk dengan ID ' . $itemData['product_id'] . ' tidak ditemukan.'], 404);
+                    }
+                    if ($produk->stok < $itemData['quantity']) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Stok produk ' . $produk->nama . ' tidak mencukupi untuk kuantitas yang diminta.'], 400);
+                    }
+                    $hargaItem = $produk->harga - ($produk->harga * $produk->diskon / 100);
+                    $subtotal = $hargaItem * $itemData['quantity'];
+                    $totalCampuran = 0;
+                    $namaCampuran = [];
+                    $komponenBumbu = [];
+                    if (isset($itemData['komponen_bumbu']) && is_array($itemData['komponen_bumbu'])) {
+                        foreach ($itemData['komponen_bumbu'] as $mix) {
+                            if (!isset($mix['produk_id']) || !isset($mix['jumlah'])) continue;
+                            $produkMix = Produk::find($mix['produk_id']);
+                            if ($produkMix && !empty($mix['jumlah'])) {
+                                $hargaMix = $produkMix->harga * $mix['jumlah'];
+                                $totalCampuran += $hargaMix;
+                                $namaCampuran[] = $produkMix->nama . ' (' . $mix['jumlah'] . ' ' . $produkMix->satuan . ')';
+                                $komponenBumbu[] = [
+                                    'produk_id' => $mix['produk_id'],
+                                    'jumlah' => $mix['jumlah'],
+                                ];
+                            }
+                        }
+                    }
+                    $subtotalTotal = $subtotal + $totalCampuran;
+                    $totalHarga += $subtotalTotal;
+                    $orderItemsMidtrans[] = [
+                        'id' => $produk->id,
+                        'price' => (int) $subtotalTotal,
+                        'quantity' => 1,
+                        'name' => $produk->nama . (count($namaCampuran) ? ' + ' . implode(', ', $namaCampuran) : ''),
+                    ];
+                }
+
+                $kurir = \App\Models\Kurir::find($request->kurir_id);
+                $ongkir = $kurir ? $kurir->harga : 0;
+                $totalHarga += $ongkir;
+                $orderItemsMidtrans[] = [
+                    'id' => 'ONGKIR',
+                    'price' => (int) $ongkir,
+                    'quantity' => 1,
+                    'name' => 'Ongkos Kirim',
+                ];
+
+                $kodePesanan = 'ORD-' . Str::upper(Str::random(8));
+
+                $pesanan = Pesanan::create([
+                    'user_id' => $userId,
+                    'kode_pesanan' => $kodePesanan,
+                    'total_harga' => $totalHarga,
+                    'status' => 'pending',
+                    'metode_pembayaran' => $request->metode_pembayaran,
+                    'alamat_pengiriman' => $request->alamat_pengiriman,
+                    'kurir_id' => $request->kurir_id,
+                    'ongkir' => $ongkir,
                 ]);
-                
-                // Kurangi stok produk
-                $produk->stok -= $itemData['quantity'];
-                $produk->save();
-            }
 
-            // --- Integrasi Midtrans --- 
-            if ($request->metode_pembayaran === 'online_midtrans') {
-                // Set konfigurasi Midtrans
-                Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
-                Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-                Config::$isSanitized = true; 
-                Config::$is3ds = true;       
+                foreach ($request->items as $itemData) {
+                    $produk = Produk::find($itemData['product_id']);
+                    $hargaItem = ($produk->harga - ($produk->harga * $produk->diskon / 100));
+                    $komponenBumbu = [];
+                    if (isset($itemData['komponen_bumbu']) && is_array($itemData['komponen_bumbu'])) {
+                        foreach ($itemData['komponen_bumbu'] as $mix) {
+                            if (!isset($mix['produk_id']) || !isset($mix['jumlah'])) continue;
+                            $produkMix = Produk::find($mix['produk_id']);
+                            if ($produkMix && !empty($mix['jumlah'])) {
+                                $hargaMix = $produkMix->harga * $mix['jumlah'];
+                                $komponenBumbu[] = [
+                                    'produk_id' => $mix['produk_id'],
+                                    'nama' => $produkMix->nama,
+                                    'harga_satuan' => $produkMix->harga,
+                                    'satuan' => $produkMix->satuan,
+                                    'jumlah' => $mix['jumlah'],
+                                    'subtotal' => $hargaMix,
+                                ];
+                            }
+                        }
+                    }
+                    $pesanan->itemPesanan()->create([
+                        'produk_id' => $itemData['product_id'],
+                        'quantity' => $itemData['quantity'],
+                        'harga' => $hargaItem,
+                        'komponen_bumbu' => $komponenBumbu,
+                    ]);
+                    $produk->stok -= $itemData['quantity'];
+                    $produk->save();
+                    if (isset($itemData['komponen_bumbu']) && is_array($itemData['komponen_bumbu'])) {
+                        foreach ($itemData['komponen_bumbu'] as $komponen) {
+                            if (!isset($komponen['produk_id']) || !isset($komponen['jumlah'])) continue;
+                            $produkCampur = Produk::find($komponen['produk_id']);
+                            if ($produkCampur) {
+                                $produkCampur->stok -= $komponen['jumlah'];
+                                $produkCampur->save();
+                            }
+                        }
+                    }
+                }
 
-                $customerDetails = [
-                    'first_name' => auth()->user()->name,
-                    'email' => auth()->user()->email,
-                    'phone' => auth()->user()->phone ?? '08123456789', 
-                    'address' => auth()->user()->address ?? $request->alamat_pengiriman, 
-                ];
+                // Integrasi Midtrans jika online
+                $snapToken = null;
+                $midtransUrl = null;
+                if ($request->metode_pembayaran === 'online_midtrans') {
+                    Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
+                    Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+                    Config::$isSanitized = true;
+                    Config::$is3ds = true;
+                    $customerDetails = [
+                        'first_name' => auth()->user()->name,
+                        'email' => auth()->user()->email,
+                        'phone' => auth()->user()->phone ?? '08123456789',
+                        'address' => auth()->user()->address ?? $request->alamat_pengiriman,
+                    ];
+                    $params = [
+                        'transaction_details' => [
+                            'order_id' => $kodePesanan,
+                            'gross_amount' => (int) $totalHarga,
+                        ],
+                        'customer_details' => $customerDetails,
+                        'item_details' => $orderItemsMidtrans,
+                        'callbacks' => [
+                            'finish' => env('APP_URL') . '/api/midtrans/finish',
+                            'error' => env('APP_URL') . '/api/midtrans/error',
+                            'pending' => env('APP_URL') . '/api/midtrans/pending',
+                        ]
+                    ];
+                    $snapToken = Snap::getSnapToken($params);
+                    $midtransUrl = (Config::$isProduction ? 'https://app.midtrans.com/snap/v2/vtweb/' : 'https://app.sandbox.midtrans.com/snap/v2/vtweb/') . $snapToken;
+                    $pesanan->midtrans_order_id = $kodePesanan;
+                    $pesanan->save();
+                }
 
-                $params = [
-                    'transaction_details' => [
-                        'order_id' => $kodePesanan, 
-                        'gross_amount' => (int) $totalHarga,
-                    ],
-                    'customer_details' => $customerDetails,
-                    'item_details' => $orderItemsMidtrans,
-                    'callbacks' => [
-                        'finish' => env('APP_URL') . '/api/midtrans/finish',
-                        'error' => env('APP_URL') . '/api/midtrans/error',
-                        'pending' => env('APP_URL') . '/api/midtrans/pending',
-                        'notification' => env('APP_URL') . '/api/midtrans/notification',
-                    ]
-                ];
-
-                $snapToken = Snap::getSnapToken($params);
-
-                // Update pesanan dengan Midtrans Order ID
-                $pesanan->midtrans_order_id = $kodePesanan;
-                $pesanan->save();
-
-                DB::commit(); 
+                DB::commit();
 
                 return response()->json([
-                    'message' => 'Pesanan berhasil dibuat, lanjutkan pembayaran melalui Midtrans.',
+                    'message' => 'Pesanan berhasil dibuat.',
                     'pesanan' => $pesanan->load('itemPesanan.produk'),
                     'snap_token' => $snapToken,
-                    'midtrans_url' => (Config::$isProduction ? 'https://app.midtrans.com/snap/v2/vtweb/' : 'https://app.sandbox.midtrans.com/snap/v2/vtweb/') . $snapToken
+                    'midtrans_url' => $midtransUrl,
                 ], 201);
-
-            } else {
-                // Jika bukan pembayaran online
-                // Buat notifikasi untuk pesanan offline
-                $this->createNotification($pesanan, 'Pesanan dibuat', 'Pesanan #' . $pesanan->kode_pesanan . ' berhasil dibuat dan menunggu konfirmasi pembayaran.', [
-                    'payment_method' => $request->metode_pembayaran,
-                    'is_offline_payment' => true
-                ]);
-                
-                DB::commit();
-                return response()->json($pesanan->load('itemPesanan.produk'), 201);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json(['message' => 'Terjadi kesalahan saat membuat pesanan.', 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
             }
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['message' => 'Terjadi kesalahan saat membuat pesanan.', 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
         }
     }
 
@@ -202,7 +239,52 @@ class PesananController extends Controller
         ];
         $pesananData = $pesanan->load('user', 'itemPesanan.produk');
         $pesananData->status_label = $statusLabels[$pesanan->status] ?? $pesanan->status;
-        
+        $pesananData->subtotal = $pesanan->total_harga - ($pesanan->ongkir ?? 0);
+        $pesananData->ongkir = $pesanan->ongkir ?? 0;
+        $pesananData->total_harga = $pesanan->total_harga;
+        $itemsDetail = [];
+        foreach ($pesananData->itemPesanan as $item) {
+            $item->satuan = $item->produk->satuan ?? null;
+            $item->detail_satuan = $item->produk->detail_satuan ?? null;
+            // Tambahkan detail campuran ke response
+            if ($item->komponen_bumbu) {
+                $komponenBumbu = $item->komponen_bumbu;
+                if (is_string($komponenBumbu)) {
+                    $komponenBumbu = json_decode($komponenBumbu, true) ?: [];
+                }
+                $detailCampuran = [];
+                $totalCampuran = 0;
+                if (is_array($komponenBumbu)) {
+                    foreach ($komponenBumbu as &$komponen) {
+                        $produkCampur = \App\Models\Produk::find($komponen['produk_id'] ?? null);
+                        if ($produkCampur) {
+                            $komponen['nama'] = $produkCampur->nama;
+                            $komponen['satuan'] = $produkCampur->satuan;
+                            $komponen['detail_satuan'] = $produkCampur->detail_satuan;
+                            $komponen['harga_satuan'] = $produkCampur->harga;
+                            $komponen['subtotal'] = $produkCampur->harga * ($komponen['jumlah'] ?? 1);
+                            $totalCampuran += $komponen['subtotal'];
+                            $detailCampuran[] = $komponen;
+                        }
+                    }
+                }
+                $item->komponen_bumbu_detail = $detailCampuran;
+                $item->subtotal_campuran = $totalCampuran;
+            }
+            $item->subtotal_produk = $item->harga * $item->quantity;
+            $item->subtotal_total = ($item->subtotal_produk ?? 0) + ($item->subtotal_campuran ?? 0);
+            $itemsDetail[] = [
+                'produk_id' => $item->produk_id,
+                'nama' => $item->produk->nama ?? '',
+                'quantity' => $item->quantity,
+                'harga_satuan' => $item->harga,
+                'subtotal_produk' => $item->subtotal_produk,
+                'campuran' => $item->komponen_bumbu_detail ?? [],
+                'subtotal_campuran' => $item->subtotal_campuran ?? 0,
+                'subtotal_total' => $item->subtotal_total,
+            ];
+        }
+        $pesananData->items_detail = $itemsDetail;
         // Tambahkan label Bahasa Indonesia untuk status transaksi Midtrans
         $midtransStatusLabels = [
             'settlement' => 'Sudah Dibayar',
@@ -307,30 +389,17 @@ class PesananController extends Controller
         Log::info('Midtrans notification received', ['payload' => $request->all()]);
         Log::info('Midtrans raw body', ['raw' => $request->getContent()]);
 
-        // Set konfigurasi Midtrans dengan namespace yang benar
         \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
         \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
         \Midtrans\Config::$isSanitized = true;
 
-        $payload = $request->all();
-        if (empty($payload)) {
-            $payload = json_decode($request->getContent(), true);
-            Log::info('Midtrans raw body fallback', ['payload' => $payload]);
-        }
-
-        if (empty($payload)) {
-            Log::error('Midtrans notification: payload tetap kosong!');
-            return response()->json(['message' => 'Payload kosong'], 400);
-        }
-
         $notif = new \Midtrans\Notification();
-
         $transactionStatus = $notif->transaction_status;
-        $fraudStatus = $notif->fraud_status;
         $orderId = $notif->order_id;
-        Log::info('Cek pesanan dari order_id', ['order_id' => $orderId]);
-        $pesanan = Pesanan::where('kode_pesanan', $orderId)->first();
+        $fraudStatus = $notif->fraud_status;
 
+        // Cek apakah pesanan sudah ada
+        $pesanan = \App\Models\Pesanan::where('kode_pesanan', $orderId)->first();
         if (!$pesanan) {
             Log::error('Pesanan tidak ditemukan', ['order_id' => $orderId]);
             return response()->json(['message' => 'Pesanan tidak ditemukan.'], 404);
@@ -371,28 +440,28 @@ class PesananController extends Controller
             ]);
         } elseif ($transactionStatus == 'deny') {
             $pesanan->update(['midtrans_transaction_status' => 'deny', 'status' => 'cancelled']);
+            $this->restoreStokPesanan($pesanan);
             // Buat notifikasi untuk pembayaran ditolak
             $this->createNotification($pesanan, 'Pembayaran ditolak', 'Pembayaran pesanan #' . $pesanan->kode_pesanan . ' ditolak oleh sistem. Silakan coba metode pembayaran lain.', [
                 'payment_type' => $notif->payment_type ?? 'unknown',
                 'fraud_status' => $fraudStatus
             ]);
-            // TODO: Kembalikan stok jika perlu untuk transaksi yang dibatalkan/ditolak
         } elseif ($transactionStatus == 'expire') {
             $pesanan->update(['midtrans_transaction_status' => 'expire', 'status' => 'cancelled']);
+            $this->restoreStokPesanan($pesanan);
             // Buat notifikasi untuk pembayaran kadaluarsa
             $this->createNotification($pesanan, 'Pembayaran kadaluarsa', 'Pembayaran pesanan #' . $pesanan->kode_pesanan . ' telah kadaluarsa. Silakan buat pesanan baru.', [
                 'payment_type' => $notif->payment_type ?? 'unknown',
                 'fraud_status' => $fraudStatus
             ]);
-            // TODO: Kembalikan stok jika perlu untuk transaksi yang kadaluarsa
         } elseif ($transactionStatus == 'cancel') {
             $pesanan->update(['midtrans_transaction_status' => 'cancel', 'status' => 'cancelled']);
+            $this->restoreStokPesanan($pesanan);
             // Buat notifikasi untuk pembayaran dibatalkan
             $this->createNotification($pesanan, 'Pembayaran dibatalkan', 'Pembayaran pesanan #' . $pesanan->kode_pesanan . ' telah dibatalkan oleh Anda.', [
                 'payment_type' => $notif->payment_type ?? 'unknown',
                 'fraud_status' => $fraudStatus
             ]);
-            // TODO: Kembalikan stok jika perlu untuk transaksi yang dibatalkan oleh pengguna
         }
 
         return response()->json(['message' => 'Notifikasi Midtrans berhasil diproses.']);
@@ -414,6 +483,8 @@ class PesananController extends Controller
                 $produkList[] = [
                     'nama' => $item->produk->nama,
                     'quantity' => $item->quantity,
+                    'satuan' => $item->produk->satuan ?? null,
+                    'detail_satuan' => $item->produk->detail_satuan ?? null,
                     'harga' => $item->harga,
                     'subtotal' => $item->harga * $item->quantity,
                     'komponen_bumbu' => $item->komponen_bumbu,
@@ -474,6 +545,35 @@ class PesananController extends Controller
     }
 
     /**
+     * Helper untuk mengembalikan stok produk dan komponen campuran pada pesanan
+     */
+    private function restoreStokPesanan($pesanan)
+    {
+        foreach ($pesanan->itemPesanan as $item) {
+            // Kembalikan stok produk utama
+            $produk = \App\Models\Produk::find($item->produk_id);
+            if ($produk) {
+                $produk->stok += $item->quantity;
+                $produk->save();
+            }
+            // Kembalikan stok komponen campuran jika ada
+            $komponenBumbu = $item->komponen_bumbu;
+            if (is_string($komponenBumbu)) {
+                $komponenBumbu = json_decode($komponenBumbu, true) ?: [];
+            }
+            if (is_array($komponenBumbu)) {
+                foreach ($komponenBumbu as $komponen) {
+                    $produkCampur = \App\Models\Produk::find($komponen['produk_id'] ?? null);
+                    if ($produkCampur && isset($komponen['jumlah'])) {
+                        $produkCampur->stok += $komponen['jumlah'];
+                        $produkCampur->save();
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Redirect URL untuk Midtrans setelah pembayaran berhasil (untuk browser/webview di Flutter).
      */
     public function midtransFinish(Request $request)
@@ -519,6 +619,11 @@ class PesananController extends Controller
         ];
         $pesanans->transform(function ($pesanan) use ($statusLabels) {
             $pesanan->status_label = $statusLabels[$pesanan->status] ?? $pesanan->status;
+            // Tambahkan satuan pada setiap item pesanan
+            foreach ($pesanan->itemPesanan as $item) {
+                $item->satuan = $item->produk->satuan ?? null;
+                $item->detail_satuan = $item->produk->detail_satuan ?? null;
+            }
             return $pesanan;
         });
         return response()->json($pesanans);
