@@ -434,7 +434,7 @@
                 <div>
                     <h3 class="text-2xl font-bold text-primary mb-4">Bumbu Opie</h3>
                     <p class="text-gray-300 mb-4">
-                        Bumbu masak premium Indonesia dengan cita rasa autentik untuk keluarga Indonesia.
+                        Bumbu masak premium Pekanbaru dengan cita rasa autentik untuk keluarga Pekanbaru.
                     </p>
                     <div class="flex space-x-4">
                         <a href="#" class="text-gray-300 hover:text-primary">

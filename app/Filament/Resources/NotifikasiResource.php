@@ -96,6 +96,7 @@ class NotifikasiResource extends Resource
                 TextColumn::make('created_at')
                     ->label('Dibuat Pada')
                     ->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
             ])
             ->filters([

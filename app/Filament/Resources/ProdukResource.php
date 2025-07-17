@@ -115,6 +115,7 @@ class ProdukResource extends Resource
                 TextColumn::make('kode_barang')
                     ->label('Kode Bumbu')
                     ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 TextColumn::make('nama')
                     ->label('Nama Bumbu')
@@ -136,12 +137,15 @@ class ProdukResource extends Resource
                 TextColumn::make('stok')
                     ->label('Stok')
                     ->numeric()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 TextColumn::make('satuan')
                     ->label('Satuan')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 TextColumn::make('detail_satuan')
                     ->label('Detail Satuan')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 ImageColumn::make('gambar')
                     ->label('Gambar')

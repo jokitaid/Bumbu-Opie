@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^3.1",
+        "bartlett/umlwriter": "4.2",
         "cloudinary-labs/cloudinary-laravel": "^3.0",
         "darkaonline/l5-swagger": "^9.0",
         "doctrine/dbal": "^4.2",
@@ -19,6 +20,8 @@
         "midtrans/midtrans-php": "^2.6"
     },
     "require-dev": {
+        "bamarni/composer-bin-plugin": "^1.8",
+        "beyondcode/laravel-er-diagram-generator": "^5.0",
         "fakerphp/faker": "^1.23",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.13",
@@ -83,9 +86,11 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "cweagans/composer-patches": true,
+            "bamarni/composer-bin-plugin": true
         }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true
 }

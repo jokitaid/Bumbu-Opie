@@ -1,0 +1,10 @@
+
+UML Class Diagram Generation
+============================
+
+ --------------- ---------------------------------------------- 
+  Path(s)         app                                           
+  Generator       graphviz                                      
+  Configuration   Default values and/or command line arguments  
+ --------------- ---------------------------------------------- 
+
