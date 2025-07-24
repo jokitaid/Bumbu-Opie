@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "functions": {
+    "api/index.php": {
+      "runtime": "vercel-php@0.6.0"
+    }
+  },
+  "routes": [
+    { "src": "/images/(.*)", "dest": "/public/images/$1" },
+    { "src": "/css/(.*)", "dest": "/public/css/$1" },
+    { "src": "/js/(.*)", "dest": "/public/js/$1" },
+    { "src": "/storage/(.*)", "dest": "/public/storage/$1" },
+    { "src": "/(.*)", "dest": "/api/index.php" }
+  ],
+  "env": {
+    "APP_ENV": "production",
+    "APP_DEBUG": "false",
+    "APP_URL": "https://your-vercel-domain.vercel.app",
+    "APP_KEY": "base64:Cqq/wgz3e5P9xxCZbNkX4vQYKgW9LNIAhxOwWtArcd0=",
+    "DB_CONNECTION": "pgsql",
+    "DB_HOST": "db.dgrbdgvjrxvoxjxlhzln.supabase.co",
+    "DB_PORT": "5432",
+    "DB_DATABASE": "postgres",
+    "DB_USERNAME": "postgres",
+    "DB_PASSWORD": "Rahmanganteng787887",
+    "CACHE_DRIVER": "file",
+    "SESSION_DRIVER": "file",
+    "QUEUE_CONNECTION": "sync",
+    "MAIL_MAILER": "smtp",
+    "MAIL_HOST": "smtp.gmail.com",
+    "MAIL_PORT": "587",
+    "MAIL_USERNAME": "abdulhans411@gmail.com",
+    "MAIL_PASSWORD": "mqkwpwehljcwnhsd",
+    "MAIL_ENCRYPTION": "tls",
+    "MAIL_FROM_ADDRESS": "abdulhans411@gmail.com",
+    "MAIL_FROM_NAME": "BumbuOpie"
+  },
+  "outputDirectory": "public"
+}
