@@ -14,8 +14,8 @@
       { "src": "/(.*)", "dest": "/api/index.php" }
     ],
   "public": true,
-  "buildCommand": "composer install --no-dev --optimize-autoloader",
-  "outputDirectory": "public",
+  "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache && php artisan view:cache",
+  "startCommand": "php artisan serve --host 0.0.0.0 --port $PORT",
   "framework": "null",
   "env": {
     "APP_ENV": "production",
@@ -38,7 +38,11 @@
     "MAIL_PASSWORD": "mqkwpwehljcwnhsd",
     "MAIL_ENCRYPTION": "tls",
     "MAIL_FROM_ADDRESS": "abdulhans411@gmail.com",
-    "MAIL_FROM_NAME": "BumbuOpie"
+    "MAIL_FROM_NAME": "BumbuOpie",
+    "MIDTRANS_SERVER_KEY": "SB-Mid-server-ne61Nc2-FhZ6LS_THxFsTQe9",
+    "MIDTRANS_CLIENT_KEY": "SB-Mid-client-GEXePf85SFP2N7hg",
+    "MIDTRANS_IS_PRODUCTION": "false",
+    "MIDTRANS_MERCHANT_ID": "G302529204"
   },
   "outputDirectory": "public"
 }
