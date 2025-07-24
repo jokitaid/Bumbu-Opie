@@ -15,7 +15,6 @@
     ],
   "public": true,
   "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache && php artisan view:cache",
-  "startCommand": "php artisan serve --host 0.0.0.0 --port $PORT",
   "framework": "null",
   "env": {
     "APP_ENV": "production",
