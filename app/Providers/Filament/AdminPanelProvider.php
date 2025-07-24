@@ -23,6 +23,8 @@ use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\PesananTerbaru;
 use App\Filament\Widgets\AksiStatusPesanan;
 use Illuminate\Support\Facades\Gate;
+// use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\Auth\LoginCustom;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -32,7 +34,9 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->brandLogo(asset('images/logo-header.png'))
+            ->brandLogoHeight('70px')
+            ->login(LoginCustom::class)
             ->colors([
                 'primary' => Color::Amber,
             ])

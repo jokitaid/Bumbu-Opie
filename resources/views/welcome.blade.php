@@ -202,6 +202,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
                 <div class="flex items-center">
+                    <img src="{{ asset('images/logo-bumbu.png') }}" alt="Logo" class="h-10 mr-2">
                     <h1 class="text-2xl font-bold text-primary tracking-wide">Bumbu Opie</h1>
                 </div>
                 <!-- Hamburger button (mobile) -->
@@ -216,7 +217,10 @@
                 <aside id="nav-menu" class="fixed top-0 right-0 h-full w-72 max-w-full bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:shadow-none md:bg-transparent md:w-auto md:h-auto md:block rounded-l-3xl md:rounded-none flex flex-col md:flex-row md:items-center md:justify-end md:gap-2 md:py-0 md:px-0 md:relative md:top-0 md:right-0 md:h-auto md:w-auto md:shadow-none md:bg-transparent md:rounded-none md:transform-none">
                     <!-- Sidebar header (mobile only) -->
                     <div class="flex items-center justify-between px-6 pt-6 pb-2 md:hidden">
-                        <span class="text-2xl font-bold text-primary tracking-wide flex items-center"><i class="fas fa-leaf mr-2 text-accent"></i>Bumbu Opie</span>
+                        <span class="text-2xl font-bold text-primary tracking-wide flex items-center">
+                            <img src="{{ asset('images/logo-bumbu.png') }}" alt="Logo" class="h-8 mr-2">
+                            Bumbu Opie
+                        </span>
                         <button id="nav-close" class="close-btn text-primary border-2 border-primary bg-white hover:bg-primary hover:text-white text-3xl p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/40 transition shadow-sm hover:shadow-lg duration-200"><i class="fas fa-times"></i></button>
                     </div>
                     <!-- Menu list -->
@@ -432,7 +436,10 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div>
-                    <h3 class="text-2xl font-bold text-primary mb-4">Bumbu Opie</h3>
+                    <div class="flex items-center mb-4">
+                        <img src="{{ asset('images/logo-bumbu.png') }}" alt="Logo" class="h-10 mr-2">
+                        <h3 class="text-2xl font-bold text-primary">Bumbu Opie</h3>
+                    </div>
                     <p class="text-gray-300 mb-4">
                         Bumbu masak premium Pekanbaru dengan cita rasa autentik untuk keluarga Pekanbaru.
                     </p>
